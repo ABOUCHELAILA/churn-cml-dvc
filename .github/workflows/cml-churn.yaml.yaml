@@ -1,0 +1,54 @@
+name: churn-imbalanced-dataset
+on: [push]
+
+permissions: write-all
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install CML
+      uses: iterative/setup-cml@v1
+      
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Train model & generate metrics
+      run: |
+        python script.py
+        
+    - name: Generate CML Report
+      env:
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Création du rapport Markdown
+        echo "## 📊 Metrics du Modèle Churn" > report.md
+        echo "" >> report.md
+        echo "### Performance du modèle" >> report.md
+        echo '```' >> report.md
+        cat metrics.txt >> report.md
+        echo '```' >> report.md
+        echo "" >> report.md
+        echo "### Matrice de Confusion" >> report.md
+        echo "![Matrice de Confusion](./conf_matrix.png)" >> report.md
+        echo "" >> report.md
+        echo "*Workflow exécuté le $(date)*" >> report.md
+        
+        # Publication du commentaire avec CML
+        cml comment create report.md
